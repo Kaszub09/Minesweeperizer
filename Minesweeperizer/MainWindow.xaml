@@ -1,0 +1,32 @@
+﻿<Window x:Class="Minesweeperizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Minesweeperizer"
+        mc:Ignorable="d"
+        Title="Minesweeperizer" Height="290" Width="500" Icon="Images/10.png" MinWidth="500" MinHeight="290">
+    <Grid>
+        <Label Content="Source image:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="buttonSourceChoose" Content="..." Margin="0,12,16,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="26" Click="ButtonSourceChoose_Click"/>
+        <Label Content="Width x Height (in squares):" HorizontalAlignment="Left" Margin="10,41,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="textBoxWidth" HorizontalAlignment="Left" Height="23" Margin="172,43,0,0" TextWrapping="Wrap" Text="40" VerticalAlignment="Top" Width="35"/>
+        <Label Content="x" HorizontalAlignment="Left" Margin="212,40,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="textBoxHeight" HorizontalAlignment="Left" Height="23" Margin="233,43,0,0" TextWrapping="Wrap" Text="40" VerticalAlignment="Top" Width="35"/>
+        <Label Content="Square size (in pixels):" HorizontalAlignment="Left" Margin="273,41,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="textBoxSize" HorizontalAlignment="Left" Height="23" Margin="399,42,0,0" TextWrapping="Wrap" Text="20" VerticalAlignment="Top" Width="31"/>
+        <ComboBox x:Name="comboBoxChooseStyle" Margin="53,72,16.4,0" VerticalAlignment="Top"/>
+        <Button x:Name="buttonMinesweeperize" Content="MINESWEEPERIZE!" Margin="10,126,16,0" VerticalAlignment="Top" Height="85" Click="ButtonMinesweeperize_Click"/>
+        <Label x:Name="labelInfo" Content="" Margin="10,216,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="321"/>
+        <Label Content="Style:" HorizontalAlignment="Left" Margin="10,72,0,0" VerticalAlignment="Top"/>
+        <ProgressBar x:Name="progressBarDrawing" Height="22" Margin="375,220,16,0" VerticalAlignment="Top" SmallChange="0.6"/>
+        <CheckBox x:Name="CheckBoxSaveRecognised" Content="Also save recognised image." HorizontalAlignment="Left" Margin="10,105,0,0" VerticalAlignment="Top" IsChecked="True"/>
+        <TextBox x:Name="TextBoxFilepaths" Height="23" Margin="100,12,53,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <ComboBox x:Name="comBoxFlag" Margin="212,99,16,0" VerticalAlignment="Top" SelectedIndex="0">
+            <ComboBoxItem Content="Don't use flags."/>
+            <ComboBoxItem Content="Make a border from flags." ToolTip="Put flag in every unclicked squaree which has clicked neghbour."/>
+            <ComboBoxItem Content="Put flag in every unclicked square."/>
+        </ComboBox>
+
+    </Grid>
+</Window>
