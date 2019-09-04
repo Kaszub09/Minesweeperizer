@@ -4,7 +4,7 @@ Your image will look like from minesweeper.
 Refer to Examples folder for, well, examples.
 
 ## Usage
-* Best work with white/black only images. 
+* Works best with white/black only images. 
 * You can choose multiple files.
 * You can create your own themes. Just put files 0-10.png in a folder with any name, and put that folder in "minesweeper" folder,
 which should be in the same place as .exe. It is checked when opening program, and all avaible themes are listed.
