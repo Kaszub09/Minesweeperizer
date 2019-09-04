@@ -90,12 +90,15 @@ namespace Minesweeperizer
             if (openFileDialog.ShowDialog() == true)
             {
                 allFilepaths = new List<string>();
-                TextBoxFilepaths.Text="";
-                foreach (string filename in openFileDialog.FileNames)
+                
+                StringBuilder s = new StringBuilder();
+                foreach (string filepath in openFileDialog.FileNames)
                 {
-                    allFilepaths.Add(filename);
-                    TextBoxFilepaths.Text += filename + "\n";
+                    allFilepaths.Add(filepath);
+                    s.Append(Path.GetFileName(filepath));
+                    s.Append("\n"); 
                 }
+                TextBoxFilepaths.Text = s.ToString();
             }
         }
 
