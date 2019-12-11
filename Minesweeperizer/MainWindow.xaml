@@ -5,28 +5,44 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Minesweeperizer"
         mc:Ignorable="d"
-        Title="Minesweeperizer" Height="290" Width="500" Icon="Images/10.png" MinWidth="500" MinHeight="290">
+        Title="Minesweeperizer" Height="419.8" Width="328.2"   MinWidth="510" MinHeight="430">
     <Grid>
-        <Label Content="Source image:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="buttonSourceChoose" Content="..." Margin="0,12,16,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="26" Click="ButtonSourceChoose_Click"/>
-        <Label Content="Width x Height (in squares):" HorizontalAlignment="Left" Margin="10,41,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="textBoxWidth" HorizontalAlignment="Left" Height="23" Margin="172,43,0,0" TextWrapping="Wrap" Text="40" VerticalAlignment="Top" Width="35"/>
-        <Label Content="x" HorizontalAlignment="Left" Margin="212,40,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="textBoxHeight" HorizontalAlignment="Left" Height="23" Margin="233,43,0,0" TextWrapping="Wrap" Text="40" VerticalAlignment="Top" Width="35"/>
-        <Label Content="Square size (in pixels):" HorizontalAlignment="Left" Margin="273,41,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="textBoxSize" HorizontalAlignment="Left" Height="23" Margin="399,42,0,0" TextWrapping="Wrap" Text="20" VerticalAlignment="Top" Width="31"/>
-        <ComboBox x:Name="comboBoxChooseStyle" Margin="53,72,16.4,0" VerticalAlignment="Top"/>
-        <Button x:Name="buttonMinesweeperize" Content="MINESWEEPERIZE!" Margin="10,126,16,0" VerticalAlignment="Top" Height="85" Click="ButtonMinesweeperize_Click"/>
-        <Label x:Name="labelInfo" Content="" Margin="10,216,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="321"/>
-        <Label Content="Style:" HorizontalAlignment="Left" Margin="10,72,0,0" VerticalAlignment="Top"/>
-        <ProgressBar x:Name="progressBarDrawing" Height="22" Margin="375,220,16,0" VerticalAlignment="Top" SmallChange="0.6"/>
-        <CheckBox x:Name="CheckBoxSaveRecognised" Content="Also save recognised image." HorizontalAlignment="Left" Margin="10,105,0,0" VerticalAlignment="Top" IsChecked="True"/>
-        <TextBox x:Name="TextBoxFilepaths" Height="23" Margin="100,12,53,0" TextWrapping="Wrap" VerticalAlignment="Top"/>
-        <ComboBox x:Name="comBoxFlag" Margin="212,99,16,0" VerticalAlignment="Top" SelectedIndex="0">
+        <Label Content="Height in squares" HorizontalAlignment="Left" Margin="10,8,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="textBoxHeight" HorizontalAlignment="Left" Height="23" Margin="117,10,0,0" TextWrapping="Wrap" Text="40" VerticalAlignment="Top" Width="35"/>
+        <Label Content="Square size (in pixels):" HorizontalAlignment="Left" Margin="194,7,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="textBoxSize" HorizontalAlignment="Left" Height="23" Margin="325,9,0,0" TextWrapping="Wrap" Text="20" VerticalAlignment="Top" Width="31"/>
+        <ComboBox x:Name="comboBoxChooseStyle" Margin="53,42,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" Width="431"/>
+        <Label x:Name="labelInfo" Content="" Margin="10,0,9.6,37" Height="26" VerticalAlignment="Bottom"/>
+        <Label Content="Style:" HorizontalAlignment="Left" Margin="10,39,0,0" VerticalAlignment="Top"/>
+        <ProgressBar x:Name="progressBarDrawing" Margin="10,0,9.6,10" SmallChange="0.6" Height="22" VerticalAlignment="Bottom"/>
+        <ComboBox x:Name="comBoxFlag" Margin="90,69,0,0" VerticalAlignment="Top" SelectedIndex="0" HorizontalAlignment="Left" Width="394">
             <ComboBoxItem Content="Don't use flags."/>
             <ComboBoxItem Content="Make a border from flags." ToolTip="Put flag in every unclicked squaree which has clicked neghbour."/>
             <ComboBoxItem Content="Put flag in every unclicked square."/>
         </ComboBox>
+        <TabControl x:Name="TabControlMain" Margin="10,96,9.6,72">
+            <TabItem Header="Image(s)">
+                <Grid Background="#FFE5E5E5">
+                    <Button x:Name="buttonMinesweeperizeImage" Content="MINESWEEPERIZE!" Margin="10,0,10.2,10.2" Click="ButtonMinesweeperizeImage_Click" Height="80" VerticalAlignment="Bottom"/>
+                    <TextBox x:Name="TextBoxFilepathsImage" Margin="73,12,41,140" TextWrapping="Wrap"/>
+                    <CheckBox x:Name="CheckBoxSaveRecognised" Content="Also save recognised image." HorizontalAlignment="Left" Margin="10,0,0,95.2" VerticalAlignment="Bottom" IsChecked="True" Height="40"/>
+                    <Label Content="Source&#xD;&#xA;image(s):" HorizontalAlignment="Left" Margin="10,10,0,140"/>
+                    <Button x:Name="buttonSourceChooseImage" Content="..." Margin="0,12,10,140" HorizontalAlignment="Right" Width="26" Click="ButtonSourceChooseImage_Click" RenderTransformOrigin="4.154,5.231"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Video">
+                <Grid Background="#FFE5E5E5">
+                    <Button x:Name="buttonMinesweeperizeVideo" Content="MINESWEEPERIZE!" Margin="10,73,10.2,10.2" Click="ButtonMinesweeperizeVideo_Click"/>
+                    <TextBox x:Name="TextBoxFilepathsVideo" Margin="97,12,41.2,0" TextWrapping="Wrap" Height="26" VerticalAlignment="Top"/>
+                    <Label Content="Source video:" HorizontalAlignment="Left" Margin="10,10,0,0" Height="28" VerticalAlignment="Top"/>
+                    <Button x:Name="buttonSourceChooseVideo" Content="..." Margin="0,12,10.2,0" HorizontalAlignment="Right" Width="26" Click="ButtonSourceChooseVideo_Click" RenderTransformOrigin="4.154,5.231" Height="26" VerticalAlignment="Top"/>
+                    <Label Content="Input video fps:" HorizontalAlignment="Left" Margin="10,43,0,0" VerticalAlignment="Top"/>
+                    <TextBox x:Name="TextBoxVideoFps" Margin="106,42,0,0" TextWrapping="Wrap" Height="26" VerticalAlignment="Top" Text="25" HorizontalAlignment="Left" Width="25"/>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+        <CheckBox x:Name="CheckBoxAddFrame" Content="Add frame" HorizontalAlignment="Left" Margin="10,72,0,0" VerticalAlignment="Top" Width="75"/>
 
     </Grid>
 </Window>
