@@ -31,17 +31,18 @@ namespace Minesweeperizer
         string videoFilepath;
         List<string> imagesFilepaths;
         Dictionary<string, Bitmap> squares;
-        int width, height, squareSize, flags;
-        Progress<float> progressDrawing;
-        bool saveRecognised, addFrame;
+        int  height, squareSize, flags,treshold;
+        Progress<float> progressConverting;
+        bool addFrame;
         int numberPixelWidth, leftNumber, rightNumber;
+        public string ffmpeg;
 
         public MainWindow()
         {
             InitializeComponent();
             squares = new Dictionary<string, Bitmap>();
             imagesFilepaths = new List<string>();
-            progressDrawing = new Progress<float>(percent => progressBarDrawing.Value = percent);
+            progressConverting = new Progress<float>(percent => progressBarDrawing.Value = percent);
             try
             {
                 string[] themes = Directory.GetDirectories("minesweeperizer");
@@ -68,10 +69,12 @@ namespace Minesweeperizer
                 labelInfo.Content = "Couldn't find any themes.";
                 ChangeRelevantButtonState(false);
             }
+            ffmpeg = "ffmpeg";
         }
 
         private void ButtonSourceChooseImage_Click(object sender, RoutedEventArgs e)
         {
+            
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
                 Multiselect = true,
@@ -116,16 +119,21 @@ namespace Minesweeperizer
 
             addFrame = (bool)CheckBoxAddFrame.IsChecked;
             flags = comBoxFlag.SelectedIndex;
-            saveRecognised = (bool)CheckBoxSaveRecognised.IsChecked;
 
             if (!Int32.TryParse(textBoxHeight.Text, out height) || !Int32.TryParse(textBoxSize.Text, out squareSize) || height < 1 || squareSize < 1)
             {
-                labelInfo.Content = "Incorrect height\\size value.";
+                labelInfo.Content = "Incorrect height or size value.";
                 return;
             }
-            
+
+            if (!Int32.TryParse(textBoxTreshold.Text, out treshold)) {
+                labelInfo.Content = "Incorrect threshold value.";
+                return;
+            }
+
             if (!LoadGraphics())
             {
+                labelInfo.Content = "Can't find all pictures of " + ((ComboBoxItem)comboBoxChooseStyle.SelectedItem).Content.ToString() + " theme.";
                 return;
             }
 
@@ -134,9 +142,14 @@ namespace Minesweeperizer
             for (int i = 0; i < imagesFilepaths.Count; i++)
             {
                 labelInfo.Content = "Processing file " + (i + 1).ToString() + " of " + imagesFilepaths.Count.ToString() + ".";
-                await Task.Run(() => Minesweeperize(imagesFilepaths[i],true));
+                await Task.Run(() =>  {
+                    Bitmap output = MinesweeperizerClass.Minesweeperize(new Bitmap(imagesFilepaths[i]), squares, squareSize, treshold, height, flags, addFrame);
+                    output.Save(imagesFilepaths[i].Remove(imagesFilepaths[i].Length - Path.GetExtension(imagesFilepaths[i]).Length) + " (minesweeperized)" + ".png", ImageFormat.Png);
+                });
+                ((IProgress<float>)progressConverting).Report(100 * i / imagesFilepaths.Count);
             }
             labelInfo.Content = "Done!";
+            ((IProgress<float>)progressConverting).Report(0);
             ChangeRelevantButtonState(true);
         }
 
@@ -148,6 +161,7 @@ namespace Minesweeperizer
                 return;
             }
 
+
             addFrame = (bool)CheckBoxAddFrame.IsChecked;
             flags = comBoxFlag.SelectedIndex;
 
@@ -157,28 +171,71 @@ namespace Minesweeperizer
                 return;
             }
 
+            if (!Int32.TryParse(textBoxTreshold.Text, out treshold)) {
+                labelInfo.Content = "Incorrect threshold value.";
+                return;
+            }
+
             if (!LoadGraphics())
             {
                 return;
             }
 
-            ChangeRelevantButtonState(false);
             MinesweeperizeVideo();
-            ChangeRelevantButtonState(true);
         }
 
         private async void MinesweeperizeVideo()
         {
-            Double fps = int.Parse(TextBoxVideoFps.Text);
+            ChangeRelevantButtonState(false);
+            labelInfo.Content = "Cleaning temporaryCatalog...";
+            double fps = 0;
+            await Task.Run(() => {
+                DirectoryInfo di = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\temporaryCatalog");
+                foreach (FileInfo file in di.EnumerateFiles()) {
+                    file.Delete();
+                }
+            });
 
-            ProcessStartInfo p = new ProcessStartInfo
-            {
-                WorkingDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\",
-                FileName = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\ffmpeg.exe",
-                Arguments = "-i \"" + videoFilepath + "\"" + " temporaryCatalog\\%05d.png"
-            };
-            var procIN = System.Diagnostics.Process.Start(p);
-            procIN.WaitForExit();
+            labelInfo.Content = "Reading fps info...";
+            await Task.Run(() => {
+                var p = new Process {
+                    StartInfo = new ProcessStartInfo {
+                        WorkingDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\",
+                        FileName = ffmpeg,
+                        Arguments = " -i \"" + videoFilepath + "\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+
+                try {
+                    p.Start();
+                }
+                catch (Exception e) {
+                    WindowFFMPEG w = new WindowFFMPEG();
+                    w.ShowDialog();
+                    p.StartInfo.FileName = ffmpeg;
+                    p.Start();
+                }
+                String line = p.StandardError.ReadToEnd();
+                line = System.Text.RegularExpressions.Regex.Match(line, $", [0-9.]+? fps,").Value;
+                line = line.Remove(line.Length - 5);
+                line = line.Substring(2, line.Length - 2);
+                p.WaitForExit();
+                fps = Double.Parse(line);
+            });
+
+            labelInfo.Content = "Extracting frames from video...";
+            await Task.Run(() => {
+                ProcessStartInfo pExtract = new ProcessStartInfo {
+                    WorkingDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\",
+                    FileName = ffmpeg,
+                    Arguments = " -i \"" + videoFilepath + "\" temporaryCatalog\\%05d.png"
+                };
+                    Process.Start(pExtract).WaitForExit();
+            });
 
             List<string> videoImagesFilepaths= new List<string>(Directory.GetFiles("minesweeperizer\\temporaryCatalog"));
             leftNumber = 0;
@@ -189,237 +246,44 @@ namespace Minesweeperizer
                 leftNumber++;
                 rightNumber = leftNumber / (int)(Math.Round(fps));
                 labelInfo.Content = "Processing image " + (i + 1).ToString() + " of " + videoImagesFilepaths.Count.ToString() + ".";
-                await Task.Run(() => Minesweeperize(videoImagesFilepaths[i], false));
-                ((IProgress<float>)progressDrawing).Report(100*i/ videoImagesFilepaths.Count);
+                await Task.Run(() => {
+                    Bitmap output = MinesweeperizerClass.Minesweeperize(new Bitmap(videoImagesFilepaths[i]), squares, squareSize, treshold, height, flags, addFrame,leftNumber,rightNumber);
+                    output.Save(videoImagesFilepaths[i].Remove(videoImagesFilepaths[i].Length - Path.GetExtension(videoImagesFilepaths[i]).Length) + " (minesweeperized)" + ".png", ImageFormat.Png);
+
+                });
+                ((IProgress<float>)progressConverting).Report(100*i/ videoImagesFilepaths.Count);
             }
 
-            p = new ProcessStartInfo
-            {
-                WorkingDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\",
-                FileName = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\ffmpeg.exe",
-                Arguments = "-framerate " + fps.ToString() + " -i \"temporaryCatalog\\%05d (minesweeperized).png\" -i \"" + videoFilepath +
-                "\" -c:a copy -c:v libx264  \"" +
-                videoFilepath.Remove(videoFilepath.Length - 5, 4) + " (minesweeperized).mp4\""
-            };
-            var procOUT = System.Diagnostics.Process.Start(p);
-            procOUT.WaitForExit();
-
-            labelInfo.Content = "Cleaning...";
-            ((IProgress<float>)progressDrawing).Report(100);
+            labelInfo.Content = "Rendering video...";
             await Task.Run(() => {
-                System.GC.Collect();
-                DirectoryInfo di = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\temporaryCatalog");
-                foreach (FileInfo file in di.EnumerateFiles())
-                {
-                    file.Delete();
-                }
+                ProcessStartInfo pCompile = new ProcessStartInfo {
+                    WorkingDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location) + "\\minesweeperizer\\",
+                    FileName = ffmpeg,
+                    Arguments = "-framerate " + fps.ToString() + " -i \"temporaryCatalog\\%05d (minesweeperized).png\" -i \"" + videoFilepath +
+                    "\" -c:a copy -c:v libx264  \"" +  videoFilepath.Remove(videoFilepath.Length - 5, 4) + " (minesweeperized).mp4\""
+                };
+                Process.Start(pCompile).WaitForExit();
             });
 
             labelInfo.Content = "Done.";
-            ((IProgress<float>)progressDrawing).Report(0);
-
-
+            ((IProgress<float>)progressConverting).Report(0);
+            ChangeRelevantButtonState(true);
         }
 
         private void ChangeRelevantButtonState(bool v)
         {
             TabControlMain.IsEnabled = v;
+            buttonMinesweeperizeImage.IsEnabled = v;
+            buttonMinesweeperizeVideo.IsEnabled = v;
         }
 
 
-        private void Minesweeperize(string ImageLocation,bool image)
+        private void Minesweeperize(string ImageLocation)
         {
-            Bitmap temp = new Bitmap(ImageLocation);
-            double tx = temp.Width, ty = temp.Height, h = height;
-            width = (int)(tx*h/ty);
-            Bitmap source = new Bitmap(temp, width, height);
-            int [,] board = new int[width, height];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    Color c = source.GetPixel(x, y);
-                    board[x, y] = (c.R + c.G + c.B) / 3 > 127 ? 9 : 0;
-                }
-            }
-
-            board = CalculateBombs(board,flags);
-
-            if (image && saveRecognised)
-            {
-                Bitmap outputRecognised = new Bitmap(width, height);
-                using (Graphics graphics = Graphics.FromImage(outputRecognised))
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        for (int y = 0; y < height; y++)
-                        {
-                            outputRecognised.SetPixel(x, y, board[x, y] >8 ? Color.White : Color.Black);
-                        }                     
-                    }
-                    outputRecognised.Save(ImageLocation.Remove(ImageLocation.Length - System.IO.Path.GetExtension(ImageLocation).Length) + " (recognised)" + ".png", ImageFormat.Png);
-                }
-            }
-
-            Bitmap outputWithoutFrame = new Bitmap(width * squareSize, height * squareSize);
-
-            using (Graphics graphics = Graphics.FromImage(outputWithoutFrame))
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        graphics.DrawImage(squares[board[x, y].ToString()], x * squareSize, y * squareSize, squareSize, squareSize);
-                    }
-                }                
-            }
-
-            if (!addFrame)
-            {
-                outputWithoutFrame.Save(ImageLocation.Remove(ImageLocation.Length - Path.GetExtension(ImageLocation).Length) + " (minesweeperized)" + ".png", ImageFormat.Png);
-            }
-            else
-            {
-                if (image)
-                {
-                    leftNumber = 0;
-                    for (int x = 0; x < width; x++)
-                    {
-                        for (int y = 0; y < height; y++)
-                        {
-                            if (board[x, y] >= 9)
-                            {
-                                leftNumber++;
-                            }
-                        }
-                    }
-                    rightNumber = new Random().Next(1000);
-                }
-                Bitmap outputWithFrame = new Bitmap((width+2) * squareSize, (height+6) * squareSize);
-                using (Graphics graphics = Graphics.FromImage(outputWithFrame))
-                {
-                    graphics.DrawImage(outputWithoutFrame,  squareSize, 5 * squareSize, width*squareSize, height*squareSize);
-                    graphics.DrawImage(squares["top_left_corner"],   0,   0, squareSize, squareSize);
-                    graphics.DrawImage(squares["top_right_corner"], (width + 1) * squareSize, 0, squareSize, squareSize);
-                    graphics.DrawImage(squares["left_down_corner"], 0, (height + 5) * squareSize, squareSize, squareSize);
-                    graphics.DrawImage(squares["right_down_corner"], (width + 1) * squareSize, (height + 5) * squareSize, squareSize, squareSize);
-                    for (int x = 1; x < width+1; x++)
-                    {
-                        graphics.DrawImage(squares["horizontal_wall"], x* squareSize, 0, squareSize, squareSize);
-                        graphics.DrawImage(squares["empty"], x * squareSize, 1 * squareSize, squareSize, squareSize);
-                        graphics.DrawImage(squares["empty"], x * squareSize, 2 * squareSize, squareSize, squareSize);
-                        graphics.DrawImage(squares["empty"], x * squareSize, 3 * squareSize, squareSize, squareSize);
-                        graphics.DrawImage(squares["horizontal_wall"], x * squareSize, 4*squareSize, squareSize, squareSize);
-                        graphics.DrawImage(squares["horizontal_wall"], x * squareSize, (height + 5) * squareSize, squareSize, squareSize);
-                    }
-                    for (int y = 1; y < height + 5;y++)
-                    {
-                        graphics.DrawImage(squares["vertical_wall"], 0, y * squareSize, squareSize, squareSize);
-                        graphics.DrawImage(squares["vertical_wall"], (width+1) * squareSize, y*squareSize, squareSize, squareSize);
-                    }
-                    graphics.DrawImage(squares["left_middle_wall"], 0, 4 * squareSize, squareSize, squareSize);
-                    graphics.DrawImage(squares["right_middle_wall"], (width + 1) * squareSize, 4 * squareSize, squareSize, squareSize);
-                    graphics.DrawImage(squares["smile"], (width + 2) * squareSize/2 - squareSize, 3*squareSize/2, 2 * squareSize, 2 * squareSize);
-
-                    graphics.DrawImage(GetBitmapWithNumber(leftNumber, true), 3 * squareSize / 2, 3 * squareSize / 2, 4*numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(GetBitmapWithNumber(rightNumber, false), (width + 2) * squareSize - 3 * squareSize / 2 - 3 * numberPixelWidth, 3 * squareSize / 2, 3*numberPixelWidth, 2 * squareSize);
-
-                    outputWithFrame.Save(ImageLocation.Remove(ImageLocation.Length - Path.GetExtension(ImageLocation).Length) + " (minesweeperized)" + ".png", ImageFormat.Png);
-                }
-            }
+            Bitmap output = MinesweeperizerClass.Minesweeperize(new Bitmap(ImageLocation), squares, squareSize, treshold, height, flags, addFrame);
+            output.Save(ImageLocation.Remove(ImageLocation.Length - Path.GetExtension(ImageLocation).Length) + " (minesweeperized)" + ".png", ImageFormat.Png);
         }
 
-        private Bitmap GetBitmapWithNumber(int number,bool fourNumbers)
-        {
-            Bitmap BitmapWithNumber = new Bitmap(numberPixelWidth * (fourNumbers?4:3), 2 * squareSize);
-            int[] numbers=new int[4];
-            numbers[0] = number % 10;
-            numbers[1] = (number/10) % 10;
-            numbers[2] = (number / 100) % 10;
-            numbers[3] = (number / 1000) % 10;
-            using (Graphics graphics = Graphics.FromImage(BitmapWithNumber))
-            {
-                if (fourNumbers)
-                {
-                    graphics.DrawImage(squares["number" + numbers[3].ToString()], 0, 0, numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(squares["number" + numbers[2].ToString()], numberPixelWidth, 0, numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(squares["number" + numbers[1].ToString()], 2 * numberPixelWidth, 0, numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(squares["number" + numbers[0].ToString()], 3 * numberPixelWidth, 0, numberPixelWidth, 2 * squareSize);
-                }
-                else
-                {
-                    graphics.DrawImage(squares["number" + numbers[2].ToString()], 0, 0, numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(squares["number" + numbers[1].ToString()], numberPixelWidth, 0, numberPixelWidth, 2 * squareSize);
-                    graphics.DrawImage(squares["number" + numbers[0].ToString()], 2 * numberPixelWidth, 0, numberPixelWidth, 2 * squareSize);
-                }
-            }
-            return BitmapWithNumber;
-        }
-
-        private int [,] CalculateBombs(int [,] board,int flag)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    int count = 0;
-                    if (board[x, y] != 9)
-                    {
-                        for (int i = -1; i <= 1; i++)
-                        {
-                            for (int j = -1; j <= 1; j++)
-                            {
-                                if (i + x >= 0 && i + x < width && j + y >= 0 && j + y < height)
-                                {
-                                    if (board[i + x, j + y] == 9)
-                                    {
-                                        count++;
-                                    }
-                                }
-
-                            }
-                        }
-                        board[x, y] = count;
-                    }
-                }
-            }
-            if(flag == 1 || flag == 2)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        if (board[x, y] == 9)
-                        {
-                            if (flags == 2)
-                            {
-                                board[x, y] = 10;
-                            }
-                            else
-                            {
-                                for (int i = -1; i <= 1; i++)
-                                {
-                                    for (int j = -1; j <= 1; j++)
-                                    {
-                                        if (i + x >= 0 && i + x < width && j + y >= 0 && j + y < height)
-                                        {
-                                            if (board[i + x, j + y] < 9)
-                                            {
-                                                board[x, y] = 10;
-                                            }
-                                        }
-
-                                    }
-                                }
-                               
-                            }
-                        }
-                    }
-                }
-            }
-            return board;
-        }
 
         private bool LoadGraphics()
         {
@@ -434,9 +298,13 @@ namespace Minesweeperizer
                 {
                     string temp = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)
                             + "\\minesweeperizer\\" + ((ComboBoxItem)comboBoxChooseStyle.SelectedItem).Content.ToString() + "\\";
-                    for (int i = 0; i <= 10; i++)
+                    for (int i = 0; i <= 9; i++)
                     {
                         squares.Add(i.ToString(), new Bitmap(new Bitmap(temp+ i.ToString() + ".png"), squareSize, squareSize));
+                    }
+
+                    if (flags != 0) {
+                        squares.Add("10", new Bitmap(new Bitmap(temp + "10" + ".png"), squareSize, squareSize));
                     }
 
                     if (addFrame)
@@ -461,7 +329,6 @@ namespace Minesweeperizer
                 }
                 catch (ArgumentException e)
                 {
-                    labelInfo.Content = "Can't find all pictures of "+ ((ComboBoxItem)comboBoxChooseStyle.SelectedItem).Content.ToString()+" theme.";
                     return false;
                 }
                 return true;
